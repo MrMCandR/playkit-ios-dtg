@@ -140,6 +140,8 @@ public class ContentManager: NSObject, DTGContentManager {
     /// A custom referrer, used for requesting the play manifest, if no referrer is set app id is used.
     public var referrer: String?
     
+    public var urlAdapter: URLAdapter? = kalturaCaptionsAdapter(duration: 1800)
+    
     public weak var delegate: ContentManagerDelegate?
 
     public var storagePath: URL {
@@ -274,7 +276,10 @@ public class ContentManager: NSObject, DTGContentManager {
         
         let referrer = (self.referrer == nil ? Bundle.main.bundleIdentifier ?? "" : self.referrer!).data(using: .utf8)?.base64EncodedString() ?? ""
         let requestAdapter = PlayManifestRequestAdapter(url: item.remoteUrl, sessionId: self.sessionId.uuidString, clientTag: ContentManager.clientTag, referrer: referrer, playbackType: "offline")
-        let localizer = HLSLocalizer(id: id, url: requestAdapter.adapt(), downloadPath: DTGFilePaths.itemDirUrl(forItemId: id), preferredVideoBitrate: preferredVideoBitrate)
+        let localizer = HLSLocalizer(id: id, url: requestAdapter.adapt(), 
+                                     downloadPath: DTGFilePaths.itemDirUrl(forItemId: id), 
+                                     preferredVideoBitrate: preferredVideoBitrate, 
+                                     urlAdapter: self.urlAdapter)
         
         try localizer.loadMetadata()
         try localizer.saveLocalFiles()
@@ -577,5 +582,23 @@ private extension ContentManager {
         let downloader = self.downloaders[itemId]
         downloader?.invalidateSession()
         self.downloaders[itemId] = nil
+    }
+}
+
+public func kalturaCaptionsAdapter(duration: Int32) -> DTGContentManager.URLAdapter {
+    return { url in
+        guard var comps = URLComponents(string: url.absoluteString) else { return url }
+        
+        comps.path = comps.path.replacingOccurrences(
+            of: "/service/caption_captionasset/action/serveWebVTT/captionAssetId/", 
+            with: "/service/caption_captionasset/action/serveWebVTT/segmentDuration/1800/captionAssetId/")
+        
+        if let newUrl = comps.url {
+            return newUrl
+        }
+        
+        log.error("Failed to create adapted URL")
+        
+        return url
     }
 }

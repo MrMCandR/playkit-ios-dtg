@@ -99,6 +99,10 @@ public protocol DTGContentManager: class {
 }
 
 extension DTGContentManager {
+    public typealias URLAdapter = (URL) -> URL
+}
+
+extension DTGContentManager {
     
     public func setLogLevel(_ logLevel: LogLevel) {
         log.outputLevel = logLevel.asXCGLoggerLevel()

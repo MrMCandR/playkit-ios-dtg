@@ -84,6 +84,7 @@ class HLSLocalizer {
     let masterUrl: URL
     let preferredVideoBitrate: Int?
     let downloadPath: URL
+    let urlAdapter: DTGContentManager.URLAdapter?
     
     var tasks = [DownloadItemTask]()
     var duration: Double = Double.nan
@@ -96,11 +97,20 @@ class HLSLocalizer {
     var selectedAudioStreams = [MediaStream]()
     var selectedTextStreams = [MediaStream]()
 
-    init(id: String, url: URL, downloadPath: URL, preferredVideoBitrate: Int?) {
+    init(id: String, url: URL, downloadPath: URL, preferredVideoBitrate: Int?, urlAdapter: DTGContentManager.URLAdapter?) {
         self.itemId = id
         self.masterUrl = url
         self.preferredVideoBitrate = preferredVideoBitrate
         self.downloadPath = downloadPath
+        self.urlAdapter = urlAdapter
+    }
+    
+    private func adaptedURL(_ url: URL) -> URL {
+        if let adapter = urlAdapter {
+            return adapter(url)
+        } else {
+            return url
+        }
     }
     
     private func videoTrack(videoStream: M3U8ExtXStreamInf) -> DTGVideoTrack {
@@ -409,7 +419,7 @@ class HLSLocalizer {
         
         for i in 0 ..< streams.countInt {
             
-            let url: URL! = streams[i].m3u8URL()
+            let url = adaptedURL(streams[i].m3u8URL())
             do {
                 let stream = try MediaStream(streamInfo: streams[i], mediaUrl: url, type: type)
                 try addAllSegments(segmentList: stream.mediaPlaylist.segmentList, type: type)
